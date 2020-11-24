@@ -1,6 +1,10 @@
 import ProgressBar from '../ProgressBar.vue'
 import { shallowMount } from '@vue/test-utils'
 
+beforeEach(() => {
+  jest.useFakeTimers()
+})
+
 describe('ProgressBar.vue', () => {
   test('is hidden on initial render', () => {
     const wrapper = shallowMount(ProgressBar)
@@ -13,35 +17,71 @@ describe('ProgressBar.vue', () => {
     expect(wrapper.element.style.width).toBe('0%')
   })
 
-  test('display the bar when start is called', () => {
+  test('display the bar when start is called', async () => {
     const wrapper = shallowMount(ProgressBar)
     expect(wrapper.classes()).toContain('hidden')
-    wrapper.vm.start()
+    await wrapper.vm.start()
     expect(wrapper.classes()).not.toContain('hidden')
   })
 
-  test('sets the bar to 100% width when the finish is called', () => {
+  test('sets the bar to 100% width when the finish is called', async () => {
     const wrapper = shallowMount(ProgressBar)
     expect(wrapper.element.style.width).toBe('0%')
-    wrapper.vm.start()
-    wrapper.vm.finish()
+    await wrapper.vm.start()
+    expect(wrapper.classes()).not.toContain('hidden')
+    await wrapper.vm.finish()
     expect(wrapper.element.style.width).toBe('100%')
   })
 
-  test('hide the bar when finish is called', () => {
+  test('hide the bar when finish is called', async () => {
     const wrapper = shallowMount(ProgressBar)
+    await wrapper.vm.start()
     // expect(wrapper.classes()).not.toContain('hidden')
+    await wrapper.vm.finish()
     // expect(wrapper.element.style.width).toBe('100%')
-    wrapper.vm.start()
-    wrapper.vm.finish()
     expect(wrapper.classes()).toContain('hidden')
   })
 
-  test('resets to 0% width when start is called', () => {
+  test('resets to 0% width when start is called', async () => {
     const wrapper = shallowMount(ProgressBar)
-    wrapper.vm.finish()
-    wrapper.vm.start()
+    await wrapper.vm.finish()
+    await wrapper.vm.start()
     expect(wrapper.element.style.width).toBe('0%')
-    expect(wrapper.classes()).toContain('hidden')
+  })
+
+  test('increases width by 1% every 100ms after start call', async () => {
+    const wrapper = shallowMount(ProgressBar)
+    await wrapper.vm.start()
+    await jest.runTimersToTime(100)
+    expect(wrapper.element.style.width).toBe('1%')
+    await jest.runTimersToTime(900)
+    expect(wrapper.element.style.width).toBe('10%')
+    await jest.runTimersToTime(4000)
+    expect(wrapper.element.style.width).toBe('50%')
+  })
+
+  test('clears timer when finish is called', async () => {
+    await jest.spyOn(window, 'clearInterval')
+    setInterval.mockReturnValue(123)
+
+    const wrapper = shallowMount(ProgressBar)
+    await wrapper.vm.start()
+    await wrapper.vm.finish()
+    expect(window.clearInterval).toHaveBeenCalledWith(123)
+  })
+
+  test('add error class if fail is called', async () => {
+    const wrapper = shallowMount(ProgressBar)
+    await wrapper.vm.start()
+    expect(wrapper.classes()).not.toContain('error')
+    await wrapper.vm.fail()
+    expect(wrapper.classes()).toContain('error')
+  })
+
+  test('set the width to 100% if fail is called', async () => {
+    const wrapper = shallowMount(ProgressBar)
+    await wrapper.vm.start()
+    await wrapper.vm.fail()
+    expect(wrapper.element.style.width).toBe('100%')
   })
 })
